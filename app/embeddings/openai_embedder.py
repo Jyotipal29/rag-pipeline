@@ -1,3 +1,5 @@
+import time
+
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -35,16 +37,23 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     settings = get_settings()
     batch_size = settings.embedding_batch_size
     all_vectors: list[list[float]] = []
+    total_start = time.time()
 
     for start in range(0, len(texts), batch_size):
         batch = texts[start : start + batch_size]
+        batch_start = time.time()
         vectors = _embed_batch(batch, settings.embedding_model)
+        batch_time = time.time() - batch_start
         all_vectors.extend(vectors)
         logger.info(
-            "Embedded batch %s-%s (%s texts)",
+            "Embedded batch %d-%d (%d texts) in %.2fs",
             start,
             start + len(batch),
             len(batch),
+            batch_time,
         )
+
+    total_time = time.time() - total_start
+    logger.info("Total embedding time for %d texts: %.2fs", len(texts), total_time)
 
     return all_vectors

@@ -1,0 +1,14 @@
+[
+  {
+    "question": "List every clause that gives the company authority to terminate employment.",
+    "expected_page_numbers": [],
+    "expected_keywords": ["terminate", "termination", "authority"],
+    "notes": "Fill page numbers after indexing your sample PDF."
+  },
+  {
+    "question": "What are all confidentiality obligations mentioned in the agreement?",
+    "expected_page_numbers": [],
+    "expected_keywords": ["confidential", "non-disclosure", "nda"],
+    "notes": "Template — customize for your corpus."
+  }
+]

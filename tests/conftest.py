@@ -14,6 +14,9 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("RAW_DIR", str(raw_dir))
     monkeypatch.setenv("PROCESSED_DIR", str(processed_dir))
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ENRICHMENT_ENABLED", "false")
+    monkeypatch.setenv("COVERAGE_VERIFY_ENABLED", "false")
+    monkeypatch.setenv("ANSWER_VALIDATION_ENABLED", "false")
 
     # Clear settings cache so env vars apply
     from app.config.settings import get_settings

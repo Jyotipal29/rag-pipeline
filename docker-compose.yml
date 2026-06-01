@@ -8,5 +8,18 @@ services:
       - qdrant_storage:/qdrant/storage
     restart: unless-stopped
 
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: docmind
+    volumes:
+      - mongodb_storage:/data/db
+    restart: unless-stopped
+
 volumes:
   qdrant_storage:
+  mongodb_storage:
