@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.ask import router as ask_router
 from app.api.routes.ingestion import router as ingestion_router
 from app.auth.router import router as auth_router
+from app.chat.router import router as chat_router
 from app.config.settings import get_settings
 from app.db.collections import create_indexes
 from app.db.mongo import close_db, connect_db, get_db
@@ -77,6 +78,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(auth_router)
     app.include_router(documents_router)
+    app.include_router(chat_router)
     app.include_router(ingestion_router)
     app.include_router(ask_router)
 
