@@ -12,6 +12,7 @@ from app.config.settings import get_settings
 from app.db.collections import create_indexes
 from app.db.mongo import close_db, connect_db, get_db
 from app.documents.router import router as documents_router
+from app.library.router import router as library_router
 from app.metrics.enrichment_metrics import get_metrics
 from app.retrieval import keyword_index
 from app.utils.logger import configure_root_logging, get_logger
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(documents_router)
     app.include_router(chat_router)
+    app.include_router(library_router)
     app.include_router(ingestion_router)
     app.include_router(ask_router)
 
