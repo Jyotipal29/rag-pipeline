@@ -1,14 +1,14 @@
 """MongoDB connection and utilities using Motor (async driver)."""
 
-from motor.motor_asyncio import AsyncClient, AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from app.config.settings import get_settings
 
-_db_client: AsyncClient | None = None
-_db: AsyncDatabase | None = None
+_db_client: AsyncIOMotorClient | None = None
+_db: AsyncIOMotorDatabase | None = None
 
 
-async def get_db() -> AsyncDatabase:
+async def get_db() -> AsyncIOMotorDatabase:
     """Get MongoDB database instance."""
     global _db
     if _db is None:

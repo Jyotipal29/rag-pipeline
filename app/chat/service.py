@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.db.collections import CHAT_MESSAGES_COLLECTION, DOCUMENTS_COLLECTION
 from app.utils.logger import get_logger
@@ -11,7 +11,7 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-async def verify_doc_access(db: AsyncDatabase, user_id: str, doc_id: str) -> dict | None:
+async def verify_doc_access(db: AsyncIOMotorDatabase, user_id: str, doc_id: str) -> dict | None:
     """Verify user has access to document."""
     docs_col = db[DOCUMENTS_COLLECTION]
     try:
@@ -24,7 +24,7 @@ async def verify_doc_access(db: AsyncDatabase, user_id: str, doc_id: str) -> dic
 
 
 async def save_user_message(
-    db: AsyncDatabase, user_id: str, doc_id: str, doc_type: str, content: str
+    db: AsyncIOMotorDatabase, user_id: str, doc_id: str, doc_type: str, content: str
 ) -> str:
     """Save user message to chat history."""
     messages_col = db[CHAT_MESSAGES_COLLECTION]
@@ -45,7 +45,7 @@ async def save_user_message(
 
 
 async def save_assistant_message(
-    db: AsyncDatabase,
+    db: AsyncIOMotorDatabase,
     user_id: str,
     doc_id: str,
     doc_type: str,
@@ -72,7 +72,7 @@ async def save_assistant_message(
 
 
 async def get_chat_history(
-    db: AsyncDatabase, user_id: str, doc_id: str, skip: int = 0, limit: int = 20
+    db: AsyncIOMotorDatabase, user_id: str, doc_id: str, skip: int = 0, limit: int = 20
 ) -> tuple[list[dict], int]:
     """Get chat history for a document."""
     messages_col = db[CHAT_MESSAGES_COLLECTION]
@@ -90,7 +90,7 @@ async def get_chat_history(
     return messages, total
 
 
-async def delete_chat_history(db: AsyncDatabase, user_id: str, doc_id: str) -> None:
+async def delete_chat_history(db: AsyncIOMotorDatabase, user_id: str, doc_id: str) -> None:
     """Delete all chat messages for a document."""
     messages_col = db[CHAT_MESSAGES_COLLECTION]
     await messages_col.delete_many({

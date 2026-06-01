@@ -1,6 +1,6 @@
 """Bridge between document management and existing RAG pipeline with user_id injection."""
 
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.documents import service as doc_service
 from app.utils.logger import get_logger
@@ -8,7 +8,7 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-async def run_pipeline(doc_id: str, user_id: str, file_path: str, db: AsyncDatabase) -> None:
+async def run_pipeline(doc_id: str, user_id: str, file_path: str, db: AsyncIOMotorDatabase) -> None:
     """
     Run the document processing pipeline with user_id metadata injection.
 

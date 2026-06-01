@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth.dependencies import get_current_user
 from app.chat import service
@@ -21,7 +21,7 @@ async def chat_message(
     doc_id: str,
     body: ChatMessageRequest,
     current_user: dict = Depends(get_current_user),
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Stream Q&A response for a document via SSE."""
     user_id = str(current_user["_id"])
@@ -113,7 +113,7 @@ async def get_chat_history(
     skip: int = 0,
     limit: int = 20,
     current_user: dict = Depends(get_current_user),
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Get chat history for a document."""
     user_id = str(current_user["_id"])
@@ -147,7 +147,7 @@ async def get_chat_history(
 async def delete_chat_history(
     doc_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Delete chat history for a document."""
     user_id = str(current_user["_id"])

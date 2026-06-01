@@ -1,7 +1,7 @@
 """Document management routes."""
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth.dependencies import get_current_user
 from app.auth.service import get_user_by_id
@@ -35,7 +35,7 @@ async def upload_document(
     file: UploadFile = File(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: dict = Depends(get_current_user),
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Upload a PDF document for processing."""
     settings = get_settings()
@@ -95,7 +95,7 @@ async def upload_document(
     )
 
 
-async def _process_document(doc_id: str, user_id: str, file_path: str, db: AsyncDatabase) -> None:
+async def _process_document(doc_id: str, user_id: str, file_path: str, db: AsyncIOMotorDatabase) -> None:
     """Background task to process uploaded document."""
     try:
         from app.documents.pipeline_adapter import run_pipeline
@@ -111,7 +111,7 @@ async def list_documents(
     skip: int = 0,
     limit: int = 20,
     current_user: dict = Depends(get_current_user),
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """List current user's documents."""
     user_id = str(current_user["_id"])
@@ -127,7 +127,7 @@ async def list_documents(
 async def get_document(
     doc_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Get document details."""
     user_id = str(current_user["_id"])
@@ -143,7 +143,7 @@ async def get_document(
 async def get_document_status(
     doc_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Get document processing status."""
     user_id = str(current_user["_id"])
@@ -173,7 +173,7 @@ async def get_document_status(
 async def delete_document(
     doc_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Delete a document."""
     user_id = str(current_user["_id"])

@@ -1,6 +1,6 @@
 """MongoDB collection names and index creation."""
 
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 USERS_COLLECTION = "users"
 DOCUMENTS_COLLECTION = "documents"
@@ -8,7 +8,7 @@ CHAT_MESSAGES_COLLECTION = "chat_messages"
 RESEARCH_PAPERS_COLLECTION = "research_papers"
 
 
-async def create_indexes(db: AsyncDatabase) -> None:
+async def create_indexes(db: AsyncIOMotorDatabase) -> None:
     """Create MongoDB indexes on startup."""
     # Users collection indexes
     await db[USERS_COLLECTION].create_index("email", unique=True)

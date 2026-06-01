@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from bson import ObjectId
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth.schemas import UserSchema
 from app.auth.utils import hash_password, hash_refresh_token, verify_password
@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 
 async def register_user(
-    db: AsyncDatabase, email: str, password: str, name: str, auth_provider: str = "email"
+    db: AsyncIOMotorDatabase, email: str, password: str, name: str, auth_provider: str = "email"
 ) -> dict:
     """Register a new user."""
     users_col = db[USERS_COLLECTION]
@@ -50,13 +50,13 @@ async def register_user(
     return user_data
 
 
-async def get_user_by_email(db: AsyncDatabase, email: str) -> dict | None:
+async def get_user_by_email(db: AsyncIOMotorDatabase, email: str) -> dict | None:
     """Get user by email."""
     users_col = db[USERS_COLLECTION]
     return await users_col.find_one({"email": email})
 
 
-async def get_user_by_id(db: AsyncDatabase, user_id: str) -> dict | None:
+async def get_user_by_id(db: AsyncIOMotorDatabase, user_id: str) -> dict | None:
     """Get user by ID."""
     users_col = db[USERS_COLLECTION]
     try:
@@ -65,13 +65,13 @@ async def get_user_by_id(db: AsyncDatabase, user_id: str) -> dict | None:
         return None
 
 
-async def get_user_by_google_id(db: AsyncDatabase, google_id: str) -> dict | None:
+async def get_user_by_google_id(db: AsyncIOMotorDatabase, google_id: str) -> dict | None:
     """Get user by Google ID."""
     users_col = db[USERS_COLLECTION]
     return await users_col.find_one({"google_id": google_id})
 
 
-async def verify_user_password(db: AsyncDatabase, email: str, password: str) -> dict | None:
+async def verify_user_password(db: AsyncIOMotorDatabase, email: str, password: str) -> dict | None:
     """Verify user password and return user if valid."""
     user = await get_user_by_email(db, email)
     if not user or not user.get("password_hash"):
@@ -86,7 +86,7 @@ async def verify_user_password(db: AsyncDatabase, email: str, password: str) -> 
     return user
 
 
-async def verify_email(db: AsyncDatabase, token: str) -> bool:
+async def verify_email(db: AsyncIOMotorDatabase, token: str) -> bool:
     """Verify email with token and mark user as verified."""
     users_col = db[USERS_COLLECTION]
 
@@ -114,7 +114,7 @@ async def verify_email(db: AsyncDatabase, token: str) -> bool:
     return True
 
 
-async def create_or_update_google_user(db: AsyncDatabase, google_id: str, email: str, name: str) -> dict:
+async def create_or_update_google_user(db: AsyncIOMotorDatabase, google_id: str, email: str, name: str) -> dict:
     """Create or update user authenticated via Google OAuth."""
     users_col = db[USERS_COLLECTION]
 
@@ -163,7 +163,7 @@ async def create_or_update_google_user(db: AsyncDatabase, google_id: str, email:
     return user_data
 
 
-async def update_refresh_token_hash(db: AsyncDatabase, user_id: str, token_hash: str) -> None:
+async def update_refresh_token_hash(db: AsyncIOMotorDatabase, user_id: str, token_hash: str) -> None:
     """Store hashed refresh token in user document."""
     users_col = db[USERS_COLLECTION]
     await users_col.update_one(
@@ -177,7 +177,7 @@ async def update_refresh_token_hash(db: AsyncDatabase, user_id: str, token_hash:
     )
 
 
-async def invalidate_refresh_token(db: AsyncDatabase, user_id: str) -> None:
+async def invalidate_refresh_token(db: AsyncIOMotorDatabase, user_id: str) -> None:
     """Clear the stored refresh token hash (logout)."""
     users_col = db[USERS_COLLECTION]
     await users_col.update_one(
@@ -186,7 +186,7 @@ async def invalidate_refresh_token(db: AsyncDatabase, user_id: str) -> None:
     )
 
 
-async def set_password_reset_token(db: AsyncDatabase, email: str) -> str:
+async def set_password_reset_token(db: AsyncIOMotorDatabase, email: str) -> str:
     """Generate and store password reset token."""
     users_col = db[USERS_COLLECTION]
 
@@ -213,7 +213,7 @@ async def set_password_reset_token(db: AsyncDatabase, email: str) -> str:
     return reset_token
 
 
-async def reset_password(db: AsyncDatabase, token: str, new_password: str) -> bool:
+async def reset_password(db: AsyncIOMotorDatabase, token: str, new_password: str) -> bool:
     """Reset user password with token."""
     users_col = db[USERS_COLLECTION]
 

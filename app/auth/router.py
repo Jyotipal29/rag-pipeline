@@ -1,7 +1,7 @@
 """Authentication routes (register, login, OAuth, refresh, password reset)."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -53,7 +53,7 @@ def _user_to_schema(user: dict) -> UserSchema:
 @limiter.limit("5/minute")
 async def register(
     request: RegisterRequest,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Register a new user with email and password."""
     try:
@@ -86,7 +86,7 @@ async def register(
 @limiter.limit("5/minute")
 async def login(
     request: LoginRequest,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Login with email and password."""
     try:
@@ -118,7 +118,7 @@ async def login(
 @router.post("/logout")
 async def logout(
     authorization: str | None = None,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Logout and invalidate refresh token."""
     if not authorization:
@@ -144,7 +144,7 @@ async def logout(
 @router.post("/refresh", response_model=TokenRefreshResponse)
 async def refresh(
     request: dict,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Refresh access token using refresh token (refresh token rotation)."""
     refresh_token = request.get("refresh_token")
@@ -203,7 +203,7 @@ async def google_auth():
 @router.get("/google/callback")
 async def google_callback(
     code: str,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Handle Google OAuth callback and issue JWT tokens."""
     settings = get_settings()
@@ -267,7 +267,7 @@ async def google_callback(
 @router.post("/verify-email")
 async def verify_email(
     request: VerifyEmailRequest,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Verify email with token."""
     success = await service.verify_email(db, request.token)
@@ -281,7 +281,7 @@ async def verify_email(
 @limiter.limit("5/minute")
 async def forgot_password(
     request: ForgotPasswordRequest,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Request password reset (sends email)."""
     token = await service.set_password_reset_token(db, request.email)
@@ -296,7 +296,7 @@ async def forgot_password(
 @router.post("/reset-password")
 async def reset_password(
     request: ResetPasswordRequest,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Reset password with token."""
     success = await service.reset_password(db, request.token, request.new_password)

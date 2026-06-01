@@ -1,7 +1,7 @@
 """FastAPI dependencies for JWT authentication."""
 
 from fastapi import Depends, HTTPException, status
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.auth.utils import verify_access_token
 from app.auth.service import get_user_by_id
@@ -25,7 +25,7 @@ async def get_token_from_header(authorization: str | None = None) -> str:
 
 async def get_current_user(
     authorization: str | None = None,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ) -> dict:
     """
     FastAPI dependency to get the current authenticated user.
@@ -52,7 +52,7 @@ async def get_current_user(
 
 async def optional_user(
     authorization: str | None = None,
-    db: AsyncDatabase = Depends(get_db),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ) -> dict | None:
     """
     FastAPI dependency to optionally get the current authenticated user.

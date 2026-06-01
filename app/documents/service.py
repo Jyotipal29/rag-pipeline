@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bson import ObjectId
-from motor.motor_asyncio import AsyncDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.config.settings import get_settings
 from app.db.collections import DOCUMENTS_COLLECTION
@@ -13,7 +13,7 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-async def create_document(db: AsyncDatabase, user_id: str, filename: str, file_size: int) -> str:
+async def create_document(db: AsyncIOMotorDatabase, user_id: str, filename: str, file_size: int) -> str:
     """Create a new document record."""
     docs_col = db[DOCUMENTS_COLLECTION]
 
@@ -37,7 +37,7 @@ async def create_document(db: AsyncDatabase, user_id: str, filename: str, file_s
     return str(result.inserted_id)
 
 
-async def get_document(db: AsyncDatabase, user_id: str, doc_id: str) -> dict | None:
+async def get_document(db: AsyncIOMotorDatabase, user_id: str, doc_id: str) -> dict | None:
     """Get document by ID (verify user ownership)."""
     docs_col = db[DOCUMENTS_COLLECTION]
     try:
@@ -49,7 +49,7 @@ async def get_document(db: AsyncDatabase, user_id: str, doc_id: str) -> dict | N
         return None
 
 
-async def list_documents(db: AsyncDatabase, user_id: str, skip: int = 0, limit: int = 20) -> tuple[list[dict], int]:
+async def list_documents(db: AsyncIOMotorDatabase, user_id: str, skip: int = 0, limit: int = 20) -> tuple[list[dict], int]:
     """List user's documents."""
     docs_col = db[DOCUMENTS_COLLECTION]
 
@@ -61,7 +61,7 @@ async def list_documents(db: AsyncDatabase, user_id: str, skip: int = 0, limit: 
     return documents, total
 
 
-async def delete_document(db: AsyncDatabase, user_id: str, doc_id: str) -> bool:
+async def delete_document(db: AsyncIOMotorDatabase, user_id: str, doc_id: str) -> bool:
     """Delete document and associated data."""
     docs_col = db[DOCUMENTS_COLLECTION]
 
@@ -98,7 +98,7 @@ async def delete_document(db: AsyncDatabase, user_id: str, doc_id: str) -> bool:
 
 
 async def update_document_status(
-    db: AsyncDatabase,
+    db: AsyncIOMotorDatabase,
     doc_id: str,
     status: str,
     error_msg: str | None = None,
