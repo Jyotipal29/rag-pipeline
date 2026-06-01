@@ -159,3 +159,4 @@ class AskResponse(BaseModel):
     concepts: list[str] = Field(default_factory=list)
     coverage_complete: bool | None = None
     validation_warnings: list[str] = Field(default_factory=list)
+    metrics: dict[str, Any] = Field(default_factory=dict, description="Latency and performance metrics")

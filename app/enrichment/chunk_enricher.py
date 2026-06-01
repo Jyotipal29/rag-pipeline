@@ -37,12 +37,36 @@ def _enrich_batch(batch: list[Chunk], filename: str) -> None:
 
 
 def enrich_chunks(chunks: list[Chunk], filename: str) -> list[Chunk]:
+    """
+    Enrich chunks with summaries, topics, and entities via LLM.
+
+    U4: This function is now ONLY called in legacy/test paths.
+    In production critical path, enrichment is:
+    1. Skipped during indexing (build_and_index_chunks -> _prepare_chunks_for_indexing)
+    2. Queued as background task (enrich_document_task in Celery)
+    3. Applied on-demand during retrieval if needed (future: U5)
+
+    If ENRICHMENT_ENABLED=false (default in U4), skips LLM calls.
+    If ENRICHMENT_ENABLED=true (legacy), runs synchronous enrichment (slow path).
+
+    Args:
+        chunks: Chunks to enrich
+        filename: Document filename for LLM context
+
+    Returns:
+        Chunks with enrichment metadata (summary, topics, entities)
+    """
     settings = get_settings()
     if not settings.enrichment_enabled:
         for chunk in chunks:
             if chunk.chunk_role == "child" and not chunk.embedding_text:
                 chunk.embedding_text = chunk.text_for_embedding()
         return chunks
+
+    logger.warning(
+        "ENRICHMENT_ENABLED=true detected; running synchronous enrichment (slow path). "
+        "For production, use background enrichment via Celery (ENRICHMENT_ENABLED=false)."
+    )
 
     children = [c for c in chunks if c.chunk_role == "child"]
     batch_size = settings.enrichment_batch_size

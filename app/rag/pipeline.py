@@ -1,7 +1,9 @@
 import asyncio
+import time
 
 from app.config.settings import get_settings
 from app.generation.openai_chat import generate_answer, rewrite_query
+from app.metrics import LatencyMetrics, LatencyTracker
 from app.models.document import AskRequest, AskResponse, RetrievedChunk
 from app.models.retrieval import COVERAGE_QUERY_TYPES
 from app.rag.answer_validator import validate_answer
@@ -26,6 +28,9 @@ def answer_question(
     if not question:
         raise ValueError("Question must not be empty")
 
+    # Initialize latency tracking
+    tracker = LatencyTracker("default")
+
     if not collection_has_chunks() and not _has_keyword_chunks():
         return AskResponse(
             question=question,
@@ -42,11 +47,15 @@ def answer_question(
 
     document_ids = request.document_ids or None
 
-    retrieved, profile, plan = retrieve_for_question(
+    # Retrieve chunks with strategy and profile selection
+    retrieval_start = time.perf_counter()
+    retrieved, profile, plan, query_id, strategy = retrieve_for_question(
         search_question,
         force_coverage=force_coverage,
         document_ids=document_ids,
     )
+    tracker = LatencyTracker(query_id)
+    tracker.record_phase("retrieval", (time.perf_counter() - retrieval_start) * 1000)
 
     if not retrieved:
         return AskResponse(
@@ -87,7 +96,11 @@ def answer_question(
     context = build_context(final_chunks)
     context_tokens = len(context.split())
     logger.info(f"Context Tokens: {context_tokens}")
+
+    # Track LLM generation latency
+    llm_start = time.perf_counter()
     answer = generate_answer(question, context)
+    tracker.record_phase("llm", (time.perf_counter() - llm_start) * 1000)
 
     # Compute confidence score for gating reflection and supplemental retrieval
     confidence = score_retrieval(final_chunks, final_chunks, answer)
@@ -98,9 +111,13 @@ def answer_question(
     settings = get_settings()
 
     is_coverage = profile.query_type in COVERAGE_QUERY_TYPES or force_coverage
+    reflection_used = False
+    secondary_retrieval_used = False
 
     # Gate reflection (coverage verification) on confidence < 0.75
     if is_coverage and settings.coverage_verify_enabled and confidence.score < 0.75:
+        reflection_used = True
+        reflection_start = time.perf_counter()
         concepts = plan.concepts if plan else []
         complete, missing = verify_coverage(
             question, concepts, final_chunks, answer
@@ -109,6 +126,7 @@ def answer_question(
 
         # Gate supplemental retrieval on confidence < 0.5 (low confidence only)
         if not complete and missing and settings.coverage_max_rounds > 0 and confidence.score < 0.5:
+            secondary_retrieval_used = True
             existing_ids = {c.chunk_id for c in final_chunks}
             extra = supplemental_retrieval(
                 missing, profile, existing_ids, document_ids=document_ids
@@ -122,11 +140,15 @@ def answer_question(
                 merged = expand_parent_context(merged)
                 final_chunks = merged[: profile.final_k]
                 context = build_context(final_chunks)
+                llm_start_2 = time.perf_counter()
                 answer = generate_answer(question, context)
+                tracker.record_phase("llm", tracker.phase_times.get("llm", 0) + (time.perf_counter() - llm_start_2) * 1000)
                 complete, _ = verify_coverage(
                     question, concepts, final_chunks, answer
                 )
                 coverage_complete = complete
+
+        tracker.record_phase("reflection", (time.perf_counter() - reflection_start) * 1000)
 
     if settings.answer_validation_enabled:
         grounded, warnings, _ = validate_answer(question, answer, context)
@@ -136,6 +158,19 @@ def answer_question(
                 "\n\n_Note: Some statements may not be fully supported by the "
                 "retrieved excerpts. Verify against the source document._"
             )
+
+    # Build latency metrics
+    metrics = tracker.build_metrics(
+        strategy=strategy.value,
+        profile=profile.profile_type.value,
+        num_queries=len(plan.queries) if plan else 1,
+        retrieval_cycles=2 if secondary_retrieval_used else 1,
+        confidence_score=confidence.score,
+        reflection_used=reflection_used,
+        enrichment_used=False,  # U6: enrichment removed from hot path
+        secondary_retrieval_used=secondary_retrieval_used,
+    )
+    logger.info(f"Latency metrics: {metrics.model_dump_json()}")
 
     return AskResponse(
         question=question,
@@ -148,6 +183,7 @@ def answer_question(
         concepts=plan.concepts if plan else [],
         coverage_complete=coverage_complete,
         validation_warnings=validation_warnings,
+        metrics=metrics.model_dump(),
     )
 
 

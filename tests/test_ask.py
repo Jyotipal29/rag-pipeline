@@ -37,7 +37,7 @@ def test_answer_question_returns_citations(
     _mock_kw,
     _mock_collection,
 ):
-    from app.models.retrieval import QueryType, RetrievalPlan, RetrievalProfile
+    from app.models.retrieval import QueryType, RetrievalPlan, RetrievalProfile, RetrievalStrategy
 
     chunk = _sample_chunk()
     mock_retrieve.return_value = (
@@ -50,6 +50,8 @@ def test_answer_question_returns_citations(
             per_query_limit=20,
         ),
         RetrievalPlan(queries=["Who is the manager?"]),
+        "test-query-id",
+        RetrievalStrategy.SIMPLE,
     )
     mock_rerank.return_value = [chunk]
     mock_generate.return_value = "The employee reports to the HR Director [1]."

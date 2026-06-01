@@ -10,6 +10,12 @@ class RetrievalStrategy(StrEnum):
     DEEP_RESEARCH = "deep_research"
 
 
+class RetrievalProfileType(StrEnum):
+    FAST = "fast"
+    BALANCED = "balanced"
+    RESEARCH = "research"
+
+
 class QueryType(StrEnum):
     FACT_RETRIEVAL = "fact_retrieval"
     COVERAGE_SEARCH = "coverage_search"
@@ -40,6 +46,7 @@ class RetrievalProfile(BaseModel):
     multi_query_enabled: bool = False
     multi_query_max: int = Field(default=8, ge=1, le=20)
     per_query_limit: int = Field(..., ge=1, le=50)
+    profile_type: RetrievalProfileType = Field(default=RetrievalProfileType.BALANCED)
 
 
 class QueryClassification(BaseModel):

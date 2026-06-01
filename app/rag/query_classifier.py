@@ -7,6 +7,8 @@ from app.models.retrieval import (
     QueryClassification,
     QueryType,
     RetrievalProfile,
+    RetrievalProfileType,
+    RetrievalStrategy,
 )
 from app.rag.prompts import CLASSIFIER_SYSTEM_PROMPT
 from app.utils.logger import get_logger
@@ -99,3 +101,14 @@ def profile_for_query_type(query_type: QueryType) -> RetrievalProfile:
         multi_query_max=settings.multi_query_max,
         per_query_limit=settings.retrieval_k,
     )
+
+
+def profile_for_strategy(strategy: RetrievalStrategy) -> RetrievalProfileType:
+    """Map RetrievalStrategy to RetrievalProfileType."""
+    strategy_to_profile = {
+        RetrievalStrategy.SIMPLE: RetrievalProfileType.FAST,
+        RetrievalStrategy.COVERAGE: RetrievalProfileType.BALANCED,
+        RetrievalStrategy.ANALYTICAL: RetrievalProfileType.RESEARCH,
+        RetrievalStrategy.DEEP_RESEARCH: RetrievalProfileType.RESEARCH,
+    }
+    return strategy_to_profile.get(strategy, RetrievalProfileType.BALANCED)
