@@ -72,15 +72,9 @@ def answer_question(
     logger.info(f"Candidates Retrieved: {len(retrieved)}")
     logger.info(f"Candidates After Rerank: {len(final_chunks)}")
 
-    # U5: On-demand enrichment fallback — enrich non-enriched chunks if needed
-    final_chunks, enrichment_metrics = _enrich_chunks_on_demand(final_chunks)
-    enrichment_used = enrichment_metrics is not None
+    # U6: Enrichment removed from hot path (moved to async post-response for RESEARCH profile)
+    enrichment_used = False
     logger.info(f"Enrichment Triggered: {enrichment_used}")
-    if enrichment_metrics:
-        logger.debug(
-            "On-demand enrichment metrics: %s",
-            enrichment_metrics,
-        )
 
     # Log top chunk titles for debugging
     if final_chunks:
@@ -163,38 +157,39 @@ def _has_keyword_chunks() -> bool:
     return keyword_index.has_chunks()
 
 
-def _enrich_chunks_on_demand(
-    chunks: list[RetrievedChunk],
-) -> tuple[list[RetrievedChunk], dict[str, int] | None]:
-    """
-    Apply on-demand enrichment to retrieved chunks (U5).
-
-    Runs async enrichment in thread pool to avoid blocking the sync answer_question function.
-    If enrichment fails or is disabled, returns chunks as-is (graceful degradation).
-
-    Args:
-        chunks: Retrieved chunks (may include non-enriched chunks)
-
-    Returns:
-        Tuple of:
-        - Retrieved chunks (unchanged; enrichment stored in Qdrant async)
-        - Metrics dict {cache_hits, cache_misses, enriched_chunks} or None if disabled/error
-    """
-    settings = get_settings()
-
-    # If enrichment disabled, skip
-    if not settings.enrichment_enabled:
-        return chunks, None
-
-    try:
-        # Run async enrichment in thread pool (non-blocking)
-        # This allows sync FastAPI endpoint to use async enrichment
-        enriched_chunks, metrics = asyncio.run(
-            enrich_retrieved_chunks_if_needed(chunks)
-        )
-        return enriched_chunks, metrics
-    except Exception as exc:
-        logger.warning(
-            "On-demand enrichment failed (returning un-enriched chunks): %s", exc
-        )
-        return chunks, None
+# U6: Enrichment removed from hot path. For RESEARCH profile, async enrichment triggered post-response.
+# def _enrich_chunks_on_demand(
+#     chunks: list[RetrievedChunk],
+# ) -> tuple[list[RetrievedChunk], dict[str, int] | None]:
+#     """
+#     Apply on-demand enrichment to retrieved chunks (U5).
+#
+#     Runs async enrichment in thread pool to avoid blocking the sync answer_question function.
+#     If enrichment fails or is disabled, returns chunks as-is (graceful degradation).
+#
+#     Args:
+#         chunks: Retrieved chunks (may include non-enriched chunks)
+#
+#     Returns:
+#         Tuple of:
+#         - Retrieved chunks (unchanged; enrichment stored in Qdrant async)
+#         - Metrics dict {cache_hits, cache_misses, enriched_chunks} or None if disabled/error
+#     """
+#     settings = get_settings()
+#
+#     # If enrichment disabled, skip
+#     if not settings.enrichment_enabled:
+#         return chunks, None
+#
+#     try:
+#         # Run async enrichment in thread pool (non-blocking)
+#         # This allows sync FastAPI endpoint to use async enrichment
+#         enriched_chunks, metrics = asyncio.run(
+#             enrich_retrieved_chunks_if_needed(chunks)
+#         )
+#         return enriched_chunks, metrics
+#     except Exception as exc:
+#         logger.warning(
+#             "On-demand enrichment failed (returning un-enriched chunks): %s", exc
+#         )
+#         return chunks, None
