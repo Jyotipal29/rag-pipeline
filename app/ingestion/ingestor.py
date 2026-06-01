@@ -1,5 +1,8 @@
-from app.chunking.recursive_chunker import chunk_pages
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from app.config.settings import get_settings
+from app.indexing.pipeline import build_and_index_chunks
 from app.ingestion.pdf_extractor import extract_pages_from_pdf
 from app.ingestion.storage import (
     compute_document_id,
@@ -7,9 +10,8 @@ from app.ingestion.storage import (
     save_ingestion_result,
     save_raw_pdf,
 )
-from app.models.document import IndexingResult, IngestionResult
+from app.models.document import BatchIndexingResult, IndexingResult, IngestionResult
 from app.utils.logger import get_logger
-from app.vectorstore.qdrant_client import upsert_chunks
 
 logger = get_logger(__name__)
 
@@ -43,8 +45,7 @@ def index_document(document_id: str) -> IndexingResult:
     if ingestion is None:
         raise FileNotFoundError(f"No processed ingestion found for document_id={document_id}")
 
-    chunks = chunk_pages(ingestion.pages, ingestion.document_id, ingestion.filename)
-    indexed_count = upsert_chunks(chunks)
+    chunks, indexed_count = build_and_index_chunks(ingestion)
 
     return IndexingResult(
         document_id=ingestion.document_id,
@@ -59,8 +60,7 @@ def index_document(document_id: str) -> IndexingResult:
 def ingest_and_index_pdf_bytes(file_bytes: bytes, filename: str) -> IndexingResult:
     """Full pipeline: extract -> persist JSON -> chunk -> embed -> Qdrant."""
     ingestion = ingest_pdf_bytes(file_bytes, filename)
-    chunks = chunk_pages(ingestion.pages, ingestion.document_id, ingestion.filename)
-    indexed_count = upsert_chunks(chunks)
+    chunks, indexed_count = build_and_index_chunks(ingestion)
 
     logger.info(
         "Indexed document %s: %s chunks",
@@ -75,4 +75,58 @@ def ingest_and_index_pdf_bytes(file_bytes: bytes, filename: str) -> IndexingResu
         chunk_count=len(chunks),
         indexed_count=indexed_count,
         ingestion=ingestion,
+    )
+
+
+def ingest_and_index_many(file_items: list[tuple[bytes, str]]) -> BatchIndexingResult:
+    """Index multiple PDFs in parallel into the shared vector collection."""
+    if not file_items:
+        return BatchIndexingResult(
+            results=[],
+            document_ids=[],
+            total_indexed=0,
+            total_chunks=0,
+        )
+
+    start_time = time.time()
+    max_workers = min(len(file_items), 4)
+    results = []
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(ingest_and_index_pdf_bytes, file_bytes, filename): (
+                file_bytes,
+                filename,
+            )
+            for file_bytes, filename in file_items
+        }
+
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                results.append(result)
+                elapsed = time.time() - start_time
+                logger.info(
+                    "Completed document %s in parallel (%.1fs elapsed)",
+                    result.document_id,
+                    elapsed,
+                )
+            except Exception as exc:
+                file_bytes, filename = futures[future]
+                logger.error("Failed to index %s: %s", filename, exc)
+                raise
+
+    total_time = time.time() - start_time
+    logger.info(
+        "Batch indexing complete: %d documents, %d chunks total in %.1fs",
+        len(results),
+        sum(r.chunk_count for r in results),
+        total_time,
+    )
+
+    return BatchIndexingResult(
+        results=results,
+        document_ids=[result.document_id for result in results],
+        total_indexed=sum(result.indexed_count for result in results),
+        total_chunks=sum(result.chunk_count for result in results),
     )

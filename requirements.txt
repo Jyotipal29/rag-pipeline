@@ -7,12 +7,22 @@ pydantic-settings==2.7.0
 
 # PDF extraction
 pymupdf==1.25.3
+pytesseract==0.3.13
+Pillow==11.1.0
 
 # Embeddings & vector store (Phase 1B)
 openai==1.59.6
 qdrant-client==1.13.2
 tiktoken==0.8.0
 tenacity==9.0.0
+
+# Phase 2 — hybrid retrieval & reranking
+rank-bm25==0.2.2
+cohere==5.13.11
+
+# Async task queue (U3)
+celery==5.4.0
+redis==5.0.4
 
 # UI
 gradio==5.12.0

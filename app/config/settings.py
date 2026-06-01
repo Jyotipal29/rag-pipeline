@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     embedding_model: str = Field(default="text-embedding-3-small", alias="EMBEDDING_MODEL")
-    embedding_batch_size: int = Field(default=64, alias="EMBEDDING_BATCH_SIZE")
+    embedding_batch_size: int = Field(default=256, alias="EMBEDDING_BATCH_SIZE")
 
     qdrant_url: str = Field(default="http://127.0.0.1:6333", alias="QDRANT_URL")
     qdrant_collection: str = Field(default="research_chunks", alias="QDRANT_COLLECTION")
@@ -41,10 +41,97 @@ class Settings(BaseSettings):
 
     chunk_size_tokens: int = Field(default=512, alias="CHUNK_SIZE_TOKENS")
     chunk_overlap_tokens: int = Field(default=64, alias="CHUNK_OVERLAP_TOKENS")
+    chunker_mode: str = Field(default="structure", alias="CHUNKER_MODE")
+
+    # Phase 2 — generation
+    chat_model: str = Field(default="gpt-4o-mini", alias="CHAT_MODEL")
+    chat_max_tokens: int = Field(default=1024, alias="CHAT_MAX_TOKENS")
+    generation_temperature: float = Field(default=0.0, alias="GENERATION_TEMPERATURE")
+
+    # Phase 2 — retrieval
+    retrieval_k: int = Field(default=20, alias="RETRIEVAL_K")
+    final_k: int = Field(default=5, alias="FINAL_K")
+    hybrid_enabled: bool = Field(default=True, alias="HYBRID_ENABLED")
+    rrf_k: int = Field(default=60, alias="RRF_K")
+
+    rerank_enabled: bool = Field(default=True, alias="RERANK_ENABLED")
+    cohere_api_key: str | None = Field(default=None, alias="COHERE_API_KEY")
+    rerank_model: str = Field(default="rerank-v3.5", alias="RERANK_MODEL")
+
+    # Phase 3A — coverage retrieval
+    query_classification_enabled: bool = Field(default=True, alias="QUERY_CLASSIFICATION_ENABLED")
+    multi_query_enabled: bool = Field(default=True, alias="MULTI_QUERY_ENABLED")
+    multi_query_max: int = Field(default=8, alias="MULTI_QUERY_MAX")
+    coverage_retrieval_k: int = Field(default=40, alias="COVERAGE_RETRIEVAL_K")
+    coverage_final_k: int = Field(default=12, alias="COVERAGE_FINAL_K")
+    coverage_per_query_limit: int = Field(default=15, alias="COVERAGE_PER_QUERY_LIMIT")
+
+    # Phase 3B — enrichment
+    enrichment_enabled: bool = Field(default=True, alias="ENRICHMENT_ENABLED")
+    enrichment_batch_size: int = Field(default=8, alias="ENRICHMENT_BATCH_SIZE")
+
+    # Phase 3C — parent expansion
+    parent_expand_enabled: bool = Field(default=True, alias="PARENT_EXPAND_ENABLED")
+    parent_max_chars: int = Field(default=4000, alias="PARENT_MAX_CHARS")
+
+    # Phase 3D — verification
+    coverage_verify_enabled: bool = Field(default=True, alias="COVERAGE_VERIFY_ENABLED")
+    coverage_max_rounds: int = Field(default=1, alias="COVERAGE_MAX_ROUNDS")
+    answer_validation_enabled: bool = Field(default=True, alias="ANSWER_VALIDATION_ENABLED")
+
+    # OCR
+    ocr_enabled: bool = Field(default=True, alias="OCR_ENABLED")
+    ocr_min_char_count: int = Field(default=50, alias="OCR_MIN_CHAR_COUNT")
+
+    # Celery + Redis (U3 — background enrichment)
+    redis_url: str = Field(default="redis://127.0.0.1:6379/0", alias="REDIS_URL")
+    celery_broker_url: str = Field(default="", alias="CELERY_BROKER_URL")
+    celery_result_backend: str = Field(default="", alias="CELERY_RESULT_BACKEND")
+    celery_task_always_eager: bool = Field(
+        default=False,
+        alias="CELERY_TASK_ALWAYS_EAGER",
+        description="If true, execute tasks synchronously (for testing)",
+    )
+    enrichment_task_max_retries: int = Field(
+        default=3, alias="ENRICHMENT_TASK_MAX_RETRIES"
+    )
+    enrichment_task_retry_backoff: int = Field(
+        default=60, alias="ENRICHMENT_TASK_RETRY_BACKOFF", description="Seconds between retries"
+    )
 
     def ensure_data_dirs(self) -> None:
         self.raw_dir.mkdir(parents=True, exist_ok=True)
         self.processed_dir.mkdir(parents=True, exist_ok=True)
+
+    def get_celery_broker_url(self) -> str:
+        """
+        Get Celery broker URL.
+
+        Priority:
+        1. CELERY_BROKER_URL env var (explicit)
+        2. REDIS_URL env var (fallback to Redis)
+        3. In-memory broker for testing (memory://)
+        """
+        if self.celery_broker_url:
+            return self.celery_broker_url
+        if self.redis_url:
+            return self.redis_url
+        return "memory://"
+
+    def get_celery_result_backend(self) -> str:
+        """
+        Get Celery result backend URL.
+
+        Priority:
+        1. CELERY_RESULT_BACKEND env var (explicit)
+        2. REDIS_URL env var (fallback to Redis)
+        3. In-memory backend for testing (cache+memory://)
+        """
+        if self.celery_result_backend:
+            return self.celery_result_backend
+        if self.redis_url:
+            return self.redis_url
+        return "cache+memory://"
 
 
 @lru_cache
