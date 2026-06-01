@@ -99,6 +99,38 @@ class Settings(BaseSettings):
         default=60, alias="ENRICHMENT_TASK_RETRY_BACKOFF", description="Seconds between retries"
     )
 
+    # MongoDB (DocMind backend)
+    mongodb_url: str = Field(default="mongodb://localhost:27017", alias="MONGODB_URL")
+    mongodb_db_name: str = Field(default="docmind", alias="MONGODB_DB_NAME")
+
+    # JWT authentication
+    jwt_secret: str = Field(default="", alias="JWT_SECRET", description="Secret key for access tokens (min 32 chars)")
+    jwt_refresh_secret: str = Field(default="", alias="JWT_REFRESH_SECRET", description="Secret key for refresh tokens")
+    jwt_access_expire_minutes: int = Field(default=15, alias="JWT_ACCESS_EXPIRE_MINUTES")
+    jwt_refresh_expire_days: int = Field(default=30, alias="JWT_REFRESH_EXPIRE_DAYS")
+
+    # Google OAuth
+    google_client_id: str = Field(default="", alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(default="", alias="GOOGLE_CLIENT_SECRET")
+    google_redirect_uri: str = Field(
+        default="http://localhost:8000/auth/google/callback",
+        alias="GOOGLE_REDIRECT_URI"
+    )
+
+    # Email (Resend)
+    resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
+    email_from: str = Field(default="noreply@docmind.ai", alias="EMAIL_FROM")
+    frontend_url: str = Field(default="http://localhost:3000", alias="FRONTEND_URL")
+
+    # File upload limits
+    max_pdf_size_mb: int = Field(default=50, alias="MAX_PDF_SIZE_MB")
+    max_pdf_pages: int = Field(default=200, alias="MAX_PDF_PAGES")
+    upload_dir: Path = Field(default=PROJECT_ROOT / "data" / "raw", alias="UPLOAD_DIR")
+
+    # Rate limiting
+    rate_limit_auth: str = Field(default="5/minute", alias="RATE_LIMIT_AUTH")
+    rate_limit_upload: str = Field(default="10/hour", alias="RATE_LIMIT_UPLOAD")
+
     def ensure_data_dirs(self) -> None:
         self.raw_dir.mkdir(parents=True, exist_ok=True)
         self.processed_dir.mkdir(parents=True, exist_ok=True)
